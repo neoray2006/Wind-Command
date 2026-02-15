@@ -248,7 +248,7 @@
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
-                updateWeather(data); updateWind(data, altitude); updateForecast(data);
+                updateWeather(data); updateWind(data, altitude); updateForecast(data, altitude);
             } catch (error) { showError(error.message); }
             finally { elements.refreshBtn.classList.remove('loading'); elements.refreshBtn.disabled = false; }
         }
@@ -281,13 +281,15 @@
             const knotsNum = parseFloat(speedKnots); updateStatus(knotsNum);
         }
 
-        function updateForecast(data) {
+        function updateForecast(data, altitude) {
             elements.forecastSection.style.display = 'block'; elements.forecastGrid.innerHTML = '';
             const days = data.daily.time.slice(0, 5);
             days.forEach((day, i) => {
                 const date = new Date(day); const dayName = date.toLocaleDateString('he-IL', { weekday: 'short' }); const dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
-                const code = data.daily.weather_code[i]; const tempMax = Math.round(data.daily.temperature_2m_max[i]); const tempMin = Math.round(data.daily.temperature_2m_min[i]); const speedMax = data.daily.wind_speed_10m_max[i]; const direction = data.daily.wind_direction_10m_dominant[i];
-                const speedKnots = (speedMax * 1.94384).toFixed(0);
+                const code = data.daily.weather_code[i]; const tempMax = Math.round(data.daily.temperature_2m_max[i]); const tempMin = Math.round(data.daily.temperature_2m_min[i]);
+                const speedMax = data.daily.wind_speed_10m_max[i];
+                const adjustedSpeed = speedMax * Math.pow(altitude / 10, 0.2);
+                const speedKnots = (adjustedSpeed * 1.94384).toFixed(0);
                 let statusClass, statusText; const k = parseFloat(speedKnots);
                 if (k <= 10) { statusClass = 'low'; statusText = 'נמוך'; }
                 else if (k <= 20) { statusClass = 'moderate'; statusText = 'בינוני'; }
