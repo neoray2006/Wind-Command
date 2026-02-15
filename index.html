@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wind Command | דרום לבנון</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --grid-line: #1e1e2a;
+            --accent-primary: #00ff88;
+            --accent-secondary: #00d4ff;
+            --accent-warning: #ffaa00;
+            --accent-danger: #ff3366;
+            --text-primary: #e0e0e0;
+            --text-secondary: #808090;
+            --text-highlight: #ffffff;
+            --border: #2a2a3a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'JetBrains Mono', monospace; background-color: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; opacity: 0.5; }
+        .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; position: relative; z-index: 1; }
+        .header { text-align: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--text-highlight); text-shadow: 0 0 20px rgba(0,255,136,0.3); }
+        .header-subtitle { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--text-secondary); margin-top: 4px; }
+        .status-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-secondary); }
+        .status-dot { width: 8px; height: 8px; background: var(--accent-primary); border-radius: 50%; animation: blink 2s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .search-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .controls-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .search-wrapper { flex: 1; min-width: 180px; position: relative; }
+        .search-icon { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; fill: var(--text-secondary); pointer-events: none; }
+        .search-input { width: 100%; padding: 12px 40px 12px 14px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-highlight); font-family: inherit; font-size: 13px; }
+        .search-input:focus { outline: none; border-color: var(--accent-primary); }
+        .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; }
+        .autocomplete-dropdown.active { display: block; }
+        .autocomplete-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        .autocomplete-item:hover { background: var(--bg-secondary); }
+        .dropdown-wrapper { position: relative; min-width: 140px; }
+        .village-select { width: 100%; padding: 12px 32px 12px 14px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-highlight); font-family: inherit; font-size: 13px; cursor: pointer; appearance: none; }
+        .dropdown-arrow { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid var(--text-secondary); }
+        .altitude-wrapper { position: relative; min-width: 100px; }
+        .altitude-select { width: 100%; padding: 12px 32px 12px 14px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-highlight); font-family: inherit; font-size: 13px; cursor: pointer; appearance: none; }
+        .altitude-label { position: absolute; right: 14px; top: -8px; font-size: 9px; background: var(--bg-card); padding: 0 4px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        .weather-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .no-selection { text-align: center; padding: 40px; color: var(--text-secondary); }
+        .no-selection h2 { font-size: 16px; margin-bottom: 8px; color: var(--text-primary); }
+        .weather-data { display: none; }
+        .weather-data.active { display: block; }
+        .village-name { text-align: center; font-size: 18px; font-weight: 600; color: var(--text-highlight); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 2px; }
+        .current-row { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+        .weather-main { display: flex; align-items: center; gap: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 16px 24px; }
+        .weather-icon { font-size: 48px; line-height: 1; }
+        .weather-temp { font-size: 36px; font-weight: 700; color: var(--text-highlight); }
+        .weather-temp sup { font-size: 18px; color: var(--text-secondary); }
+        .weather-desc { font-size: 12px; color: var(--accent-secondary); text-transform: uppercase; margin-top: 4px; }
+        .weather-details { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .detail-box { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; text-align: center; min-width: 80px; }
+        .detail-label { font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        .detail-value { font-size: 16px; font-weight: 600; color: var(--text-highlight); margin-top: 4px; }
+        .detail-value.humidity { color: var(--accent-secondary); }
+        .detail-value.pressure { color: var(--accent-warning); }
+        .detail-value.visibility { color: var(--accent-primary); }
+        .wind-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .section-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+        .wind-grid { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; }
+        .speed-box { text-align: center; padding: 16px 24px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; min-width: 120px; }
+        .speed-value { font-size: 36px; font-weight: 700; color: var(--accent-primary); line-height: 1; text-shadow: 0 0 20px rgba(0,255,136,0.4); }
+        .speed-value.kmh { color: var(--accent-secondary); text-shadow: 0 0 20px rgba(0,212,255,0.4); }
+        .speed-unit { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-top: 6px; text-transform: uppercase; }
+        .speed-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 4px; }
+        .compass-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+        .compass { width: 120px; height: 120px; position: relative; }
+        .compass-ring { width: 100%; height: 100%; border: 2px solid var(--border); border-radius: 50%; background: var(--bg-secondary); position: relative; }
+        .compass-marker { position: absolute; font-size: 9px; font-weight: 600; color: var(--text-secondary); }
+        .compass-marker.n { top: 6px; left: 50%; transform: translateX(-50%); color: var(--accent-primary); }
+        .compass-marker.s { bottom: 6px; left: 50%; transform: translateX(-50%); }
+        .compass-marker.e { right: 6px; top: 50%; transform: translateY(-50%); }
+        .compass-marker.w { left: 6px; top: 50%; transform: translateY(-50%); }
+        .compass-arrow { position: absolute; top: 50%; left: 50%; width: 50px; height: 3px; transform-origin: left center; transition: transform 0.6s ease; }
+        .compass-arrow::before { content: ''; position: absolute; right: 0; top: -5px; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 14px solid var(--accent-primary); filter: drop-shadow(0 0 6px rgba(0,255,136,0.6)); }
+        .compass-arrow::after { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 36px; height: 2px; background: var(--accent-secondary); opacity: 0.6; }
+        .compass-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; background: var(--accent-primary); border-radius: 50%; box-shadow: 0 0 10px var(--accent-primary); }
+        .compass-readout { text-align: center; margin-top: 12px; }
+        .compass-degrees { font-size: 24px; font-weight: 700; color: var(--text-highlight); }
+        .compass-direction { font-size: 14px; font-weight: 600; color: var(--accent-secondary); text-transform: uppercase; margin-top: 2px; }
+        .status-row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        .status-bar-wrapper { display: flex; gap: 3px; }
+        .status-segment { width: 32px; height: 6px; background: var(--bg-secondary); border-radius: 2px; }
+        .status-segment.active.low { background: var(--accent-primary); box-shadow: 0 0 8px var(--accent-primary); }
+        .status-segment.active.moderate { background: var(--accent-secondary); box-shadow: 0 0 8px var(--accent-secondary); }
+        .status-segment.active.strong { background: var(--accent-warning); box-shadow: 0 0 8px var(--accent-warning); }
+        .status-segment.active.extreme { background: var(--accent-danger); box-shadow: 0 0 8px var(--accent-danger); }
+        .status-label { font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 4px 12px; border-radius: 4px; background: var(--bg-secondary); border: 1px solid var(--border); }
+        .status-label.low { color: var(--accent-primary); border-color: var(--accent-primary); }
+        .status-label.moderate { color: var(--accent-secondary); border-color: var(--accent-secondary); }
+        .status-label.strong { color: var(--accent-warning); border-color: var(--accent-warning); }
+        .status-label.extreme { color: var(--accent-danger); border-color: var(--accent-danger); }
+        .forecast-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .forecast-title { font-size: 14px; font-weight: 600; color: var(--text-highlight); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+        .forecast-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+        .forecast-day { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 14px; text-align: center; transition: all 0.3s; }
+        .forecast-day:hover { border-color: var(--accent-secondary); box-shadow: 0 0 15px rgba(0,212,255,0.15); }
+        .forecast-date { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+        .forecast-day-name { font-size: 13px; font-weight: 600; color: var(--text-highlight); margin-bottom: 8px; }
+        .forecast-icon { font-size: 32px; margin-bottom: 8px; }
+        .forecast-temp { font-size: 18px; font-weight: 600; color: var(--text-highlight); }
+        .forecast-temp span { font-size: 12px; color: var(--text-secondary); }
+        .forecast-wind { font-size: 14px; font-weight: 600; color: var(--accent-primary); margin-top: 8px; }
+        .forecast-wind.kmh { font-size: 11px; color: var(--accent-secondary); font-weight: 500; }
+        .forecast-status { font-size: 10px; font-weight: 600; text-transform: uppercase; margin-top: 6px; padding: 3px 8px; border-radius: 3px; display: inline-block; }
+        .forecast-status.low { color: var(--accent-primary); background: rgba(0,255,136,0.1); }
+        .forecast-status.moderate { color: var(--accent-secondary); background: rgba(0,212,255,0.1); }
+        .forecast-status.strong { color: var(--accent-warning); background: rgba(255,170,0,0.1); }
+        .forecast-status.extreme { color: var(--accent-danger); background: rgba(255,51,102,0.1); }
+        .footer { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+        .last-updated { font-size: 11px; color: var(--text-secondary); }
+        .last-updated span { color: var(--text-highlight); font-weight: 500; }
+        .refresh-btn { display: flex; align-items: center; gap: 6px; padding: 10px 16px; background: transparent; border: 1px solid var(--accent-primary); border-radius: 6px; color: var(--accent-primary); font-family: inherit; font-size: 11px; font-weight: 600; text-transform: uppercase; cursor: pointer; }
+        .refresh-btn:hover { background: rgba(0,255,136,0.1); box-shadow: 0 0 15px rgba(0,255,136,0.3); }
+        .refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .refresh-icon { width: 14px; height: 14px; fill: currentColor; }
+        .refresh-btn.loading .refresh-icon { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .error-message { display: none; padding: 16px; background: rgba(255,51,102,0.1); border: 1px solid var(--accent-danger); border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .error-message.active { display: block; }
+        .error-message h3 { color: var(--accent-danger); font-size: 13px; margin-bottom: 6px; }
+        .error-message p { font-size: 11px; color: var(--text-secondary); }
+        @media (max-width: 600px) { .container { padding: 16px 12px; } .header h1 { font-size: 18px; } .controls-row { flex-direction: column; } .search-wrapper, .dropdown-wrapper, .altitude-wrapper { width: 100%; } .wind-grid { gap: 16px; } .speed-box { min-width: 100px; padding: 12px 16px; } .speed-value { font-size: 28px; } .weather-main { padding: 12px 16px; } .weather-icon { font-size: 36px; } .weather-temp { font-size: 28px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Wind Command</h1>
+            <div class="header-subtitle">מעקב מזג אוויר דרום לבנון</div>
+            <div class="status-bar"><span class="status-dot"></span><span>המערכת פעילה</span></div>
+        </header>
+        <div class="error-message" id="errorMessage"><h3>⚠ שגיאת חיבור</h3><p id="errorText">לא ניתן לטעון נתוני מזג אוויר</p></div>
+        <section class="search-section">
+            <div class="controls-row">
+                <div class="search-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" class="search-input" id="searchInput" placeholder="חיפוש כפר...">
+                    <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+                </div>
+                <div class="dropdown-wrapper">
+                    <select class="village-select" id="villageSelect"><option value="">בחר כפר</option></select>
+                    <div class="dropdown-arrow"></div>
+                </div>
+                <div class="altitude-wrapper">
+                    <span class="altitude-label">גובה</span>
+                    <select class="altitude-select" id="altitudeSelect">
+                        <option value="10">10מ'</option><option value="20">20מ'</option><option value="30">30מ'</option><option value="50">50מ'</option><option value="80">80מ'</option><option value="100">100מ'</option><option value="120">120מ'</option><option value="150">150מ'</option><option value="200">200מ'</option><option value="300">300מ'</option><option value="400">400מ'</option><option value="500">500מ'</option><option value="600">600מ'</option>
+                    </select>
+                    <div class="dropdown-arrow"></div>
+                </div>
+            </div>
+        </section>
+        <div class="weather-card" id="weatherCard">
+            <div class="no-selection" id="noSelection"><h2>בחר כפר</h2><p>חפש או בחר מהרשימה לצפייה בנתוני מזג אוויר</p></div>
+            <div class="weather-data" id="weatherData">
+                <div class="village-name" id="villageName">בינת ג'ביל</div>
+                <div class="current-row">
+                    <div class="weather-main">
+                        <div class="weather-icon" id="weatherIcon">⛅</div>
+                        <div><div class="weather-temp" id="weatherTemp">--<sup>°C</sup></div><div class="weather-desc" id="weatherDesc">---</div></div>
+                    </div>
+                </div>
+                <div class="weather-details">
+                    <div class="detail-box"><div class="detail-label">לחות</div><div class="detail-value humidity" id="humidity">--%</div></div>
+                    <div class="detail-box"><div class="detail-label">לחץ</div><div class="detail-value pressure" id="pressure">---- hPa</div></div>
+                    <div class="detail-box"><div class="detail-label">ראות</div><div class="detail-value visibility" id="visibility">-- km</div></div>
+                    <div class="detail-box"><div class="detail-label">עננות</div><div class="detail-value" id="clouds">--%</div></div>
+                </div>
+            </div>
+        </div>
+        <section class="wind-section">
+            <div class="section-title">רוח</div>
+            <div class="wind-grid">
+                <div class="speed-box"><div class="speed-label">מהירות רוח</div><div class="speed-value" id="speedKnots">--</div><div class="speed-unit">קשר</div></div>
+                <div class="speed-box"><div class="speed-label">מהירות רוח</div><div class="speed-value kmh" id="speedKmh">--</div><div class="speed-unit">קמ"ש</div></div>
+            </div>
+            <div class="compass-container">
+                <div class="compass"><div class="compass-ring"><span class="compass-marker n">N</span><span class="compass-marker s">S</span><span class="compass-marker e">E</span><span class="compass-marker w">W</span><div class="compass-arrow" id="compassArrow"></div><div class="compass-center"></div></div></div>
+                <div class="compass-readout"><div class="compass-degrees" id="compassDegrees">--°</div><div class="compass-direction" id="compassDirection">---</div></div>
+            </div>
+            <div class="status-row"><div class="status-bar-wrapper"><div class="status-segment" data-level="low"></div><div class="status-segment" data-level="moderate"></div><div class="status-segment" data-level="strong"></div><div class="status-segment" data-level="extreme"></div></div><div class="status-label" id="statusLabel">--</div></div>
+        </section>
+        <section class="forecast-section" id="forecastSection" style="display: none;"><div class="forecast-title">תחזית ל-5 ימים</div><div class="forecast-grid" id="forecastGrid"></div></section>
+        <footer class="footer"><div class="last-updated">עודכן לאחרונה: <span id="lastUpdated">--:--</span></div><button class="refresh-btn" id="refreshBtn" disabled><svg class="refresh-icon" viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>רענן</button></footer>
+    </div>
+    <script>
+        const CONFIG = { API_BASE: 'https://api.open-meteo.com/v1', AUTO_REFRESH_INTERVAL: 300000 };
+        const WEATHER_ICONS = { 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️', 51: '🌧️', 53: '🌧️', 55: '🌧️', 61: '🌧️', 63: '🌧️', 65: '🌧️', 71: '🌨️', 73: '🌨️', 75: '❄️', 77: '🌨️', 80: '🌦️', 81: '🌦️', 82: '⛈️', 85: '🌨️', 86: '🌨️', 95: '⛈️', 96: '⛈️', 99: '⛈️' };
+        const WEATHER_CODES = { 0: 'שמיים בהירים', 1: 'בעיקר בהיר', 2: 'מעונן חלקית', 3: 'מעונן', 45: 'ערפל', 48: 'ערפל', 51: 'טפטוף', 53: 'טפטוף', 55: 'טפטוף', 61: 'גשם קל', 63: 'גשם', 65: 'גשם חזק', 71: 'שלג קל', 73: 'שלג', 75: 'שלג חזק', 77: 'שלג', 80: 'ממטרים', 81: 'ממטרים', 82: 'ממטרים חזקים', 85: 'ממטרי שלג', 86: 'שלג', 95: 'סופת רעמים', 96: 'סופת רעמים', 99: 'סופת רעמים' };
+        const VILLAGES = [
+            { name: "בינת ג'ביל", lat: 33.1167, lon: 35.4333 }, { name: 'מרון אל-ראס', lat: 33.0833, lon: 35.4667 }, { name: 'עיתרון', lat: 33.0667, lon: 35.4833 }, { name: 'עייתא א-שעב', lat: 33.0833, lon: 35.5167 }, { name: 'חיאם', lat: 33.0333, lon: 35.5333 }, { name: 'חולא', lat: 33.0500, lon: 35.5667 }, { name: 'יארון', lat: 33.0833, lon: 35.5667 }, { name: 'רמייש', lat: 33.0833, lon: 35.5500 }, { name: 'דבל', lat: 33.0667, lon: 35.5667 }, { name: 'בלידא', lat: 33.0333, lon: 35.5833 }, { name: 'חסבאי', lat: 33.0667, lon: 35.6167 }, { name: 'כפר כנא', lat: 33.0833, lon: 35.6000 }, { name: 'נבי שית', lat: 33.0667, lon: 35.5833 }, { name: 'קצר', lat: 33.0500, lon: 35.6000 }, { name: "מרג'עון", lat: 33.0833, lon: 35.6500 }, { name: 'דיר מימאס', lat: 33.0833, lon: 35.7000 }, { name: 'סולטאניאן', lat: 33.1000, lon: 35.6667 }, { name: 'צור', lat: 33.2667, lon: 35.2000 }, { name: 'קאנא', lat: 33.1167, lon: 35.2500 }, { name: 'פרון', lat: 33.0500, lon: 35.5000 }, { name: 'קוולא', lat: 33.0833, lon: 35.4833 }, { name: "ג'דייד", lat: 33.1167, lon: 35.5167 }, { name: 'בדיא', lat: 33.1000, lon: 35.5500 }, { name: 'זראריה', lat: 33.0667, lon: 35.5500 }, { name: 'רשאיה', lat: 33.0333, lon: 35.5667 }, { name: 'נקורא', lat: 33.1167, lon: 35.1333 }, { name: 'רמאי', lat: 33.0833, lon: 35.1500 }, { name: 'אלמזאר', lat: 33.0667, lon: 35.1667 }, { name: "ג'באא", lat: 33.1000, lon: 35.1833 }, { name: 'דיר עמאר', lat: 33.0833, lon: 35.2000 }, { name: 'טאירו', lat: 33.0667, lon: 35.2167 }, { name: 'שהור', lat: 33.1167, lon: 35.2833 }, { name: 'עראייה', lat: 33.0667, lon: 35.3333 }, { name: 'שקרא', lat: 33.1167, lon: 35.3667 }, { name: 'כבריאל', lat: 33.0833, lon: 35.3833 }, { name: 'עין א-אבל', lat: 33.0833, lon: 35.4667 }, { name: 'רשידיה', lat: 33.1167, lon: 35.4833 }, { name: 'כותרי', lat: 33.0667, lon: 35.5000 }, { name: 'עביה', lat: 33.0333, lon: 35.5167 }, { name: 'כונין', lat: 33.0500, lon: 35.5333 }, { name: 'ברקית', lat: 33.0833, lon: 35.5500 }, { name: 'זיפא', lat: 33.1167, lon: 35.5667 }, { name: 'תנורא', lat: 33.0667, lon: 35.5833 }, { name: 'קאוואר', lat: 33.0333, lon: 35.6000 }, { name: 'כפר סיר', lat: 33.0833, lon: 35.6167 }, { name: 'ספירה', lat: 33.0667, lon: 35.6333 }, { name: "מארג'", lat: 33.1167, lon: 35.5333 }, { name: 'טול', lat: 33.1000, lon: 35.2667 }, { name: 'זהרא', lat: 33.0667, lon: 35.2833 }, { name: "ג'בל עליה", lat: 33.1167, lon: 35.3167 }, { name: 'בעקלין', lat: 33.0833, lon: 35.3667 }, { name: 'דואיר', lat: 33.0833, lon: 35.4333 },
+        ];
+        let currentVillage = null;
+        let autoRefreshTimer = null;
+        const elements = { searchInput: document.getElementById('searchInput'), autocompleteDropdown: document.getElementById('autocompleteDropdown'), villageSelect: document.getElementById('villageSelect'), altitudeSelect: document.getElementById('altitudeSelect'), noSelection: document.getElementById('noSelection'), weatherData: document.getElementById('weatherData'), villageName: document.getElementById('villageName'), weatherIcon: document.getElementById('weatherIcon'), weatherTemp: document.getElementById('weatherTemp'), weatherDesc: document.getElementById('weatherDesc'), humidity: document.getElementById('humidity'), pressure: document.getElementById('pressure'), visibility: document.getElementById('visibility'), clouds: document.getElementById('clouds'), speedKnots: document.getElementById('speedKnots'), speedKmh: document.getElementById('speedKmh'), compassArrow: document.getElementById('compassArrow'), compassDegrees: document.getElementById('compassDegrees'), compassDirection: document.getElementById('compassDirection'), statusLabel: document.getElementById('statusLabel'), statusSegments: document.querySelectorAll('.status-segment'), forecastSection: document.getElementById('forecastSection'), forecastGrid: document.getElementById('forecastGrid'), lastUpdated: document.getElementById('lastUpdated'), refreshBtn: document.getElementById('refreshBtn'), errorMessage: document.getElementById('errorMessage'), errorText: document.getElementById('errorText') };
+
+        function init() { populateDropdown(); setupEventListeners(); }
+
+        function populateDropdown() { VILLAGES.forEach(village => { const option = document.createElement('option'); option.value = village.name; option.textContent = village.name; elements.villageSelect.appendChild(option); }); }
+
+        function setupEventListeners() {
+            elements.searchInput.addEventListener('input', handleSearchInput);
+            document.addEventListener('click', (e) => { if (!e.target.closest('.search-wrapper')) elements.autocompleteDropdown.classList.remove('active'); });
+            elements.villageSelect.addEventListener('change', (e) => { if (e.target.value) { const village = VILLAGES.find(v => v.name === e.target.value); if (village) selectVillage(village); } });
+            elements.altitudeSelect.addEventListener('change', () => { if (currentVillage) fetchAllData(currentVillage); });
+            elements.refreshBtn.addEventListener('click', () => { if (currentVillage) fetchAllData(currentVillage); });
+        }
+
+        function handleSearchInput(e) {
+            const query = e.target.value.toLowerCase().trim();
+            if (query.length < 2) { elements.autocompleteDropdown.classList.remove('active'); return; }
+            const matches = VILLAGES.filter(v => v.name.toLowerCase().includes(query));
+            if (matches.length > 0) { renderAutocomplete(matches); elements.autocompleteDropdown.classList.add('active'); }
+            else elements.autocompleteDropdown.classList.remove('active');
+        }
+
+        function renderAutocomplete(matches) {
+            elements.autocompleteDropdown.innerHTML = '';
+            matches.forEach(village => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.textContent = village.name;
+                item.addEventListener('click', () => { selectVillage(village); elements.autocompleteDropdown.classList.remove('active'); elements.searchInput.value = village.name; });
+                elements.autocompleteDropdown.appendChild(item);
+            });
+        }
+
+        function selectVillage(village) { currentVillage = village; elements.villageSelect.value = village.name; elements.searchInput.value = village.name; elements.noSelection.style.display = 'none'; elements.weatherData.classList.add('active'); elements.refreshBtn.disabled = false; fetchAllData(village); startAutoRefresh(); }
+
+        function startAutoRefresh() { if (autoRefreshTimer) clearInterval(autoRefreshTimer); autoRefreshTimer = setInterval(() => { if (currentVillage) fetchAllData(currentVillage); }, CONFIG.AUTO_REFRESH_INTERVAL); }
+
+        async function fetchAllData(village) {
+            elements.refreshBtn.classList.add('loading'); elements.refreshBtn.disabled = true; hideError(); const altitude = parseInt(elements.altitudeSelect.value);
+            try {
+                const url = `${CONFIG.API_BASE}/forecast?latitude=${village.lat}&longitude=${village.lon}&current=temperature_2m,relative_humidity_2m,pressure_msl,visibility,cloud_cover,weather_code,wind_speed_10m,wind_direction_10m&hourly=weather_code,temperature_2m,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto&wind_speed_unit=ms`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                updateWeather(data); updateWind(data, altitude); updateForecast(data);
+            } catch (error) { showError(error.message); }
+            finally { elements.refreshBtn.classList.remove('loading'); elements.refreshBtn.disabled = false; }
+        }
+
+        function updateWeather(data) {
+            const c = data.current; const code = c.weather_code;
+            elements.villageName.textContent = currentVillage.name;
+            elements.weatherIcon.textContent = WEATHER_ICONS[code] || '⛅';
+            elements.weatherTemp.innerHTML = `${Math.round(c.temperature_2m)}<sup>°C</sup>`;
+            elements.weatherDesc.textContent = WEATHER_CODES[code] || '---';
+            elements.humidity.textContent = `${c.relative_humidity_2m}%`;
+            elements.pressure.textContent = `${Math.round(c.pressure_msl)} hPa`;
+            elements.visibility.textContent = `${(c.visibility / 1000).toFixed(1)} km`;
+            elements.clouds.textContent = `${c.cloud_cover}%`;
+            const now = new Date(); elements.lastUpdated.textContent = now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function updateWind(data, altitude) {
+            const speedMs = data.current.wind_speed_10m;
+            const adjustedSpeed = speedMs * Math.pow(altitude / 10, 0.2);
+            const speedKnots = (adjustedSpeed * 1.94384).toFixed(1);
+            const speedKmh = (adjustedSpeed * 3.6).toFixed(1);
+            elements.speedKnots.textContent = speedKnots;
+            elements.speedKmh.textContent = speedKmh;
+            const degrees = data.current.wind_direction_10m || 0;
+            const arrowDeg = (degrees + 180) % 360;
+            elements.compassArrow.style.transform = `translateY(-50%) rotate(${arrowDeg}deg)`;
+            elements.compassDegrees.textContent = `${Math.round(degrees)}°`;
+            elements.compassDirection.textContent = getCompassDirection(degrees);
+            const knotsNum = parseFloat(speedKnots); updateStatus(knotsNum);
+        }
+
+        function updateForecast(data) {
+            elements.forecastSection.style.display = 'block'; elements.forecastGrid.innerHTML = '';
+            const days = data.daily.time.slice(0, 5);
+            days.forEach((day, i) => {
+                const date = new Date(day); const dayName = date.toLocaleDateString('he-IL', { weekday: 'short' }); const dateStr = date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+                const code = data.daily.weather_code[i]; const tempMax = Math.round(data.daily.temperature_2m_max[i]); const tempMin = Math.round(data.daily.temperature_2m_min[i]); const speedMax = data.daily.wind_speed_10m_max[i]; const direction = data.daily.wind_direction_10m_dominant[i];
+                const speedKnots = (speedMax * 1.94384).toFixed(0);
+                let statusClass, statusText; const k = parseFloat(speedKnots);
+                if (k <= 10) { statusClass = 'low'; statusText = 'נמוך'; }
+                else if (k <= 20) { statusClass = 'moderate'; statusText = 'בינוני'; }
+                else if (k <= 30) { statusClass = 'strong'; statusText = 'חזק'; }
+                else { statusClass = 'extreme'; statusText = 'קיצוני'; }
+                const dayEl = document.createElement('div');
+                dayEl.className = 'forecast-day';
+                dayEl.innerHTML = `<div class="forecast-date">${dateStr}</div><div class="forecast-day-name">${dayName}</div><div class="forecast-icon">${WEATHER_ICONS[code] || '⛅'}</div><div class="forecast-temp">${tempMax}° <span>/ ${tempMin}°</span></div><div class="forecast-wind">${speedKnots} <span class="forecast-wind kmh">קשר</span></div><div class="forecast-status ${statusClass}">${statusText}</div>`;
+                elements.forecastGrid.appendChild(dayEl);
+            });
+        }
+
+        function getCompassDirection(degrees) { const dirs = ['צפון', 'צ-צמ', 'מזרח-צפון', 'מזרח', 'מזרח-דרום', 'דרום-מזרח', 'דרום', 'דרום-מערב', 'מערב-דרום', 'מערב', 'מערב-צפון', 'צפון-מערב']; return dirs[Math.round(degrees / 30) % 12]; }
+
+        function updateStatus(knots) {
+            elements.statusSegments.forEach(seg => seg.classList.remove('active', 'low', 'moderate', 'strong', 'extreme')); elements.statusLabel.classList.remove('low', 'moderate', 'strong', 'extreme');
+            let level, label;
+            if (knots <= 10) { level = 'low'; label = 'נמוך'; }
+            else if (knots <= 20) { level = 'moderate'; label = 'בינוני'; }
+            else if (knots <= 30) { level = 'strong'; label = 'חזק'; }
+            else { level = 'extreme'; label = 'קיצוני'; }
+            elements.statusSegments.forEach(seg => { if (seg.dataset.level === level) seg.classList.add('active', level); });
+            elements.statusLabel.textContent = label; elements.statusLabel.classList.add(level);
+        }
+
+        function showError(msg) { elements.errorText.textContent = msg; elements.errorMessage.classList.add('active'); }
+        function hideError() { elements.errorMessage.classList.remove('active'); }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
